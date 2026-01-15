@@ -794,6 +794,7 @@ MonoBehaviour:
   fadeDuration: 1
   player: {fileID: 372474846}
   inputGate: {fileID: 372474844}
+  virtualCamera: {fileID: 145550325}
 --- !u!4 &1025625971
 Transform:
   m_ObjectHideFlags: 0

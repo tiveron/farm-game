@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Unity.Cinemachine;
 
 public class SceneTransitionController : MonoBehaviour
 {
@@ -14,6 +15,7 @@ public class SceneTransitionController : MonoBehaviour
     [Header("Player")]
     [SerializeField] private Transform player;
     [SerializeField] private PlayerInputGate inputGate;
+    [SerializeField] private CinemachineCamera virtualCamera;
 
     private string _currentMapSceneName;
 
@@ -49,7 +51,11 @@ public class SceneTransitionController : MonoBehaviour
         yield return null;
 
         // Move player para spawn
-        MovePlayerToSpawn(req.spawnId);
+        var previousPlayerPosition = player.position;
+        if (MovePlayerToSpawn(req.spawnId))
+        {
+            SnapCameraToPlayer(previousPlayerPosition, player.position);
+        }
 
         // Descarrega mapa anterior
         if (!string.IsNullOrEmpty(_currentMapSceneName) && _currentMapSceneName != req.sceneName)
@@ -67,7 +73,7 @@ public class SceneTransitionController : MonoBehaviour
         inputGate.SetEnabled(true);
     }
 
-    private void MovePlayerToSpawn(string spawnId)
+    private bool MovePlayerToSpawn(string spawnId)
     {
         var roots = SceneManager.GetActiveScene().GetRootGameObjects();
         SpawnPointsRegistry registry = null;
@@ -80,14 +86,30 @@ public class SceneTransitionController : MonoBehaviour
         }
 
         if (registry != null && registry.TryGet(spawnId, out var spawn))
+        {
             player.position = spawn.position;
+            return true;
+        }
         else
-            Debug.LogWarning($"Spawn '{spawnId}' não encontrado na cena '{SceneManager.GetActiveScene().name}'.");
+            Debug.LogWarning($"Spawn '{spawnId}' nao encontrado na cena '{SceneManager.GetActiveScene().name}'.");
+
+        return false;
+    }
+
+    private void SnapCameraToPlayer(Vector3 previousPosition, Vector3 newPosition)
+    {
+        if (virtualCamera == null)
+        {
+            Debug.LogWarning("Cinemachine virtual camera reference not set on SceneTransitionController.");
+            return;
+        }
+
+        virtualCamera.OnTargetObjectWarped(player, newPosition - previousPosition);
     }
 
     public void LoadInitialMap(string sceneName, string spawnId)
     {
-        // Método opcional pra carregar o primeiro mapa no Start
+        // Metodo opcional pra carregar o primeiro mapa no Start
         requestSceneLoad.Raise(new SceneLoadRequest { sceneName = sceneName, spawnId = spawnId });
     }
 }
